@@ -4,14 +4,13 @@ const axios = require("axios");
 const mysql = require("mysql2");
 
 const app = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 
-// Middleware
 app.use(bodyParser.json());
 
 // MySQL connection
 const db = mysql.createConnection({
-    host: "localhost",
+    host: "127.0.0.1",
     user: "u801158482_kings",
     password: "G^cHXs@v6",
     database: "u801158482_kings"
@@ -20,46 +19,35 @@ const db = mysql.createConnection({
 db.connect((err) => {
     if (err) {
         console.log("Database connection failed:", err);
-        return;
+    } else {
+        console.log("MySQL Connected");
     }
-    console.log("MySQL Connected");
 });
 
-// Webhook endpoint
 app.post('/webhook', async (req, res) => {
 
     const receivedData = req.body;
 
-    try {
+    const sql = "INSERT INTO webhook_logs (source, data) VALUES (?, ?)";
 
-        // Store JSON in database
-        const sql = "INSERT INTO webhook_logs (source, data) VALUES (?, ?)";
+    db.query(sql, ["webhook", JSON.stringify(receivedData)], (err, result) => {
 
-        db.query(sql, [
-            "webhook",
-            JSON.stringify(receivedData)
-        ]);
+        if (err) {
+            console.log("Insert error:", err);
+            return res.status(500).json({ message: "Database error" });
+        }
 
-        // Optional: Forward to another API
-        // await axios.post("https://example.com/api", receivedData);
+        console.log("Inserted ID:", result.insertId);
 
         res.json({
-            message: "Data received and stored successfully"
+            message: "Data received and stored successfully",
+            id: result.insertId
         });
 
-    } catch (error) {
-
-        console.log(error);
-
-        res.status(500).json({
-            message: "Server error"
-        });
-
-    }
+    });
 
 });
 
-// Start server
 app.listen(PORT, () => {
-    console.log(`Server running on http://localhost:${PORT}`);
+    console.log("Server running on port " + PORT);
 });
